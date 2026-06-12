@@ -1,0 +1,58 @@
+<!--pages/bosses/bosses.wxml - 老板管理页面-->
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="card">
+    <view class="flex-row">
+      <input class="flex-1 form-input" placeholder="搜索老板姓名或手机号" bindinput="onSearch" value="{{searchText}}" />
+      <button class="add-btn" type="primary" size="mini" bindtap="showAddDialog">+</button>
+    </view>
+  </view>
+
+  <!-- 老板列表 -->
+  <view class="card" wx:if="{{bosses.length > 0}}">
+    <view class="list-item" wx:for="{{bosses}}" wx:key="id" bindtap="onEditBoss" data-boss="{{item}}">
+      <view class="flex-between">
+        <view>
+          <text class="text-bold" style="font-size: 32rpx;">{{item.name}}</text>
+          <text class="text-gray" style="margin-left: 10rpx; font-size: 24rpx;">{{item.phone}}</text>
+        </view>
+        <view>
+          <text wx:if="{{item.unit_price > 0}}" class="text-danger text-bold">¥{{item.unit_price}}/天</text>
+        </view>
+      </view>
+      <view wx:if="{{item.remark}}" class="text-gray mt-10" style="font-size: 24rpx;">{{item.remark}}</view>
+    </view>
+  </view>
+
+  <view wx:else class="card empty-state">
+    <text class="icon">👤</text>
+    <text class="text">暂无老板，点击上方 + 添加</text>
+  </view>
+
+  <!-- 添加/编辑对话框 -->
+  <view class="dialog-mask" wx:if="{{showDialog}}" bindtap="hideDialog">
+    <view class="dialog-content" catchtap="">
+      <view class="dialog-title">{{isEdit ? '编辑老板' : '添加老板'}}</view>
+      <view class="form-item">
+        <text class="form-label">姓名 *</text>
+        <input class="form-input" placeholder="请输入姓名" value="{{formData.name}}" bindinput="onFormInput" data-field="name" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">手机号 *</text>
+        <input class="form-input" placeholder="请输入手机号" value="{{formData.phone}}" bindinput="onFormInput" data-field="phone" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">日薪</text>
+        <input class="form-input" placeholder="默认日薪（元/天）" type="digit" value="{{formData.unit_price}}" bindinput="onFormInput" data-field="unit_price" />
+      </view>
+      <view class="form-item">
+        <text class="form-label">备注</text>
+        <input class="form-input" placeholder="备注信息" value="{{formData.remark}}" bindinput="onFormInput" data-field="remark" />
+      </view>
+      <view class="dialog-footer">
+        <button class="cancel-btn" bindtap="hideDialog">取消</button>
+        <button class="save-btn" type="primary" bindtap="onSave">保存</button>
+      </view>
+    </view>
+  </view>
+</view>

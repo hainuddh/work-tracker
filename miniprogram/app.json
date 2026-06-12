@@ -1,0 +1,48 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/bosses/bosses",
+    "pages/logs/logs",
+    "pages/stats/stats"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#4472C4",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "工作日志",
+    "backgroundColor": "#f5f5f5"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#4472C4",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "icons/home.png",
+        "selectedIconPath": "icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/bosses/bosses",
+        "text": "老板",
+        "iconPath": "icons/people.png",
+        "selectedIconPath": "icons/people-active.png"
+      },
+      {
+        "pagePath": "pages/logs/logs",
+        "text": "日志",
+        "iconPath": "icons/note.png",
+        "selectedIconPath": "icons/note-active.png"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计",
+        "iconPath": "icons/chart.png",
+        "selectedIconPath": "icons/chart-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

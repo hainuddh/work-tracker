@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  work-tracker:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./backup:/app/backup
+    environment:
+      - DATABASE_URL=sqlite:////app/data/work_tracker.db
+      - SECRET_KEY=45a1cd6052f73040c73f2471c9219419ca06fb08d02a78ed2f0f0dfd736c6473
+      - PORT=8000
+      - BACKUP_DIR=/app/backup
+      - BACKUP_RETENTION_DAYS=30
+      - RATE_LIMIT_PER_MINUTE=60
+    working_dir: /app
+    restart: unless-stopped

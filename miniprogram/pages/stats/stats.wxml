@@ -1,0 +1,82 @@
+<!--pages/stats/stats.wxml - 统计导出页面-->
+<view class="container">
+  <!-- 筛选 -->
+  <view class="card">
+    <view class="form-item">
+      <text class="form-label">老板</text>
+      <picker mode="selector" range="{{bossNames}}" value="{{bossIndex}}" bindchange="onBossChange">
+        <view class="form-input">{{bossIndex === -1 ? '全部老板' : bossNames[bossIndex]}}</view>
+      </picker>
+    </view>
+    <view class="flex-row" style="gap: 20rpx;">
+      <view class="flex-1 form-item">
+        <text class="form-label">起始日期</text>
+        <picker mode="date" value="{{startDate}}" bindchange="onStartDate">
+          <view class="form-input">{{startDate || '选择'}}</view>
+        </picker>
+      </view>
+      <view class="flex-1 form-item">
+        <text class="form-label">结束日期</text>
+        <picker mode="date" value="{{endDate}}" bindchange="onEndDate">
+          <view class="form-input">{{endDate || '选择'}}</view>
+        </picker>
+      </view>
+    </view>
+    <button class="calc-btn" type="primary" bindtap="calcStats">计算统计</button>
+  </view>
+
+  <!-- 汇总卡片 -->
+  <view class="card stat-summary" wx:if="{{stats.length > 0}}">
+    <view class="stat-card-row">
+      <view class="stat-item">
+        <text class="stat-num">¥{{totalAmount}}</text>
+        <text class="stat-text">总金额</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">{{totalDays}}</text>
+        <text class="stat-text">总工数（天）</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">{{totalCount}}</text>
+        <text class="stat-text">日志条数</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 按老板分组的统计 -->
+  <view wx:for="{{stats}}" wx:key="boss_id" class="card">
+    <view class="boss-header">
+      <text class="text-bold text-primary" style="font-size: 32rpx;">{{item.boss_name}}</text>
+      <text class="text-danger text-bold">¥{{item.total_amount}}</text>
+    </view>
+    <view class="boss-meta">
+      <text>{{item.total_days}}天</text>
+      <text wx:if="{{item.log_count > 0}}" style="margin-left: 20rpx;">{{item.log_count}}条日志</text>
+    </view>
+    <view class="log-detail" wx:if="{{item.logs && item.logs.length > 0}}">
+      <view class="detail-item" wx:for="{{item.logs}}" wx:key="id">
+        <text>{{item2.date}}</text>
+        <text>{{item2.content}}</text>
+        <text class="text-right">{{item2.days}}天</text>
+        <text class="text-right text-danger">¥{{item2.amount}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{stats.length === 0 && hasCalculated}}" class="card empty-state">
+    <text class="icon">📊</text>
+    <text class="text">暂无统计数据</text>
+  </view>
+
+  <!-- 导出按钮 -->
+  <view wx:if="{{stats.length > 0}}" class="export-section">
+    <view class="card">
+      <view class="card-title">导出</view>
+      <view class="export-btns">
+        <button class="export-btn" type="default" size="mini" bindtap="onExport" data-fmt="xlsx">📊 Excel</button>
+        <button class="export-btn" type="default" size="mini" bindtap="onExport" data-fmt="csv">📄 CSV</button>
+        <button class="export-btn" type="default" size="mini" bindtap="onExport" data-fmt="json">📋 JSON</button>
+      </view>
+    </view>
+  </view>
+</view>

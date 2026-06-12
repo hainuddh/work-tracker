@@ -1,0 +1,116 @@
+<!--pages/logs/logs.wxml - 日志管理页面-->
+<view class="container">
+  <!-- 筛选栏 -->
+  <view class="card">
+    <view class="flex-between mb-10">
+      <text class="text-bold">筛选</text>
+      <button size="mini" type="default" bindtap="resetFilter">重置</button>
+    </view>
+    <view class="form-item">
+      <text class="form-label">老板</text>
+      <picker mode="selector" range="{{bossNames}}" value="{{filterBossIndex}}" bindchange="onFilterBoss">
+        <view class="form-input">{{filterBossIndex === -1 ? '全部老板' : bossNames[filterBossIndex]}}</view>
+      </picker>
+    </view>
+    <view class="flex-row">
+      <view class="flex-1 form-item" style="margin-bottom: 0;">
+        <text class="form-label">起始日期</text>
+        <picker mode="date" value="{{filterStartDate}}" bindchange="onFilterStartDate">
+          <view class="form-input">{{filterStartDate || '选择日期'}}</view>
+        </picker>
+      </view>
+      <view class="flex-1 form-item" style="margin-bottom: 0;">
+        <text class="form-label">结束日期</text>
+        <picker mode="date" value="{{filterEndDate}}" bindchange="onFilterEndDate">
+          <view class="form-input">{{filterEndDate || '选择日期'}}</view>
+        </picker>
+      </view>
+    </view>
+  </view>
+
+  <!-- 记日志按钮 -->
+  <button class="add-log-btn" type="primary" bindtap="showLogDialog">+ 记日志</button>
+
+  <!-- 日志列表 -->
+  <view class="card" wx:if="{{logs.length > 0}}">
+    <view class="log-item" wx:for="{{logs}}" wx:key="id" bindtap="onEditLog" data-log="{{item}}">
+      <view class="flex-between">
+        <view>
+          <text class="text-bold">{{item.date}}</text>
+          <text class="text-gray" style="margin-left: 10rpx;">{{item.boss_name}}</text>
+        </view>
+        <text class="text-danger text-bold">¥{{item.amount}}</text>
+      </view>
+      <view class="text-gray" style="font-size: 24rpx;">{{item.content}}</view>
+      <view class="flex-between mt-10">
+        <text class="text-gray" style="font-size: 22rpx;">📍 {{item.location || '未填写'}}</text>
+        <view>
+          <text>{{item.days}}天</text>
+          <text class="tag {{item.status === 0 ? 'tag-pending' : item.status === 1 ? 'tag-confirmed' : 'tag-paid'}}">
+            {{item.status === 0 ? '待确认' : item.status === 1 ? '已确认' : '已付款'}}
+          </text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="card empty-state">
+    <text class="icon">📝</text>
+    <text class="text">暂无日志，点击上方 + 添加</text>
+  </view>
+
+  <!-- 记日志对话框 -->
+  <view class="dialog-mask" wx:if="{{showDialog}}" bindtap="hideDialog">
+    <view class="dialog-content" catchtap="">
+      <view class="dialog-title">{{isEdit ? '编辑日志' : '记日志'}}</view>
+      
+      <view class="form-item">
+        <text class="form-label">老板 *</text>
+        <picker mode="selector" range="{{bossNames}}" value="{{bossIndex}}" bindchange="onBossChange">
+          <view class="form-input">{{bossIndex >= 0 ? bossNames[bossIndex] : '请选择老板'}}</view>
+        </picker>
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">日期 *</text>
+        <picker mode="date" value="{{formData.date}}" bindchange="onDateChange">
+          <view class="form-input">{{formData.date || '选择日期'}}</view>
+        </picker>
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">工作地点</text>
+        <input class="form-input" placeholder="工作地点" value="{{formData.location}}" bindinput="onFormInput" data-field="location" />
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">工作内容 *</text>
+        <textarea class="form-input" placeholder="工作内容" value="{{formData.content}}" bindinput="onFormInput" data-field="content" />
+      </view>
+      
+      <view class="flex-row" style="gap: 20rpx;">
+        <view class="flex-1 form-item">
+          <text class="form-label">工数</text>
+          <input class="form-input" type="digit" placeholder="0.5-3" value="{{formData.days}}" bindinput="onFormInput" data-field="days" />
+        </view>
+        <view class="flex-1 form-item">
+          <text class="form-label">金额</text>
+          <input class="form-input" type="digit" placeholder="留空自动算" value="{{formData.amount}}" bindinput="onFormInput" data-field="amount" />
+        </view>
+      </view>
+
+      <view class="form-item">
+        <text class="form-label">状态</text>
+        <picker mode="selector" range="['待确认', '已确认', '已付款']" value="{{formData.status}}" bindchange="onStatusChange">
+          <view class="form-input">待确认 | 已确认 | 已付款</view>
+        </picker>
+      </view>
+
+      <view class="dialog-footer">
+        <button class="cancel-btn" bindtap="hideDialog">取消</button>
+        <button class="save-btn" type="primary" bindtap="onSave">保存</button>
+        <button class="delete-btn" wx:if="{{isEdit}}" bindtap="onDelete">删除</button>
+      </view>
+    </view>
+  </view>
+</view>
