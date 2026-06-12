@@ -1,14 +1,16 @@
 """
 FastAPI 入口文件 - 路由注册、启动配置、登录接口
 """
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Body
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import logging
 import os
 
 from app.config import settings
 from app.database import init_db
 from app.middleware import add_middleware
+from app.logging_config import setup_logging
 from app.routers import bosses, logs, backup
 from app.auth import create_access_token, verify_password, hash_password, DEFAULT_ADMIN_HASH
 
@@ -16,7 +18,14 @@ from app.auth import create_access_token, verify_password, hash_password, DEFAUL
 # ============ 生命周期 ============
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """启动时初始化数据库，关闭时清理资源"""
+    """启动时初始化日志、数据库，关闭时清理资源"""
+    # 初始化日志
+    setup_logging()
+    
+    # 获取logger
+    logger = logging.getLogger(__name__)
+    logger.info("应用启动")
+    
     # 初始化数据库表
     init_db()
     
@@ -58,7 +67,7 @@ app.include_router(backup.router)
 
 # ============ 认证接口 ============
 @app.post("/api/auth/login")
-def login(password: str):
+def login(password: str = Body(..., embed=True)):
     """
     管理员登录，返回 JWT Token
     

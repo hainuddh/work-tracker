@@ -4,7 +4,7 @@ Pydantic 请求/响应模型 - 输入校验
 """
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional
-from datetime import date as DateType
+from datetime import date as DateType, datetime
 from decimal import Decimal
 
 
@@ -47,7 +47,10 @@ class BossUpdate(BaseModel):
 
 
 class BossResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={datetime: lambda v: v.strftime("%Y-%m-%d %H:%M:%S")}
+    )
     
     id: int
     name: str
@@ -55,8 +58,8 @@ class BossResponse(BaseModel):
     remark: str
     unit_price: float
     is_active: int
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 # ============ 日志相关 ============
@@ -89,7 +92,10 @@ class LogUpdate(BaseModel):
 
 
 class LogResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={datetime: lambda v: v.strftime("%Y-%m-%d %H:%M:%S")}
+    )
     
     id: int
     boss_id: int
@@ -100,8 +106,8 @@ class LogResponse(BaseModel):
     days: float
     amount: float
     status: int
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 # ============ 统计相关 ============

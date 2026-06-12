@@ -98,7 +98,17 @@ def list_logs(
         query = query.filter(Log.status == status)
     
     query = query.order_by(Log.date.desc(), Log.created_at.desc())
-    return query.offset(skip).limit(limit).all()
+    logs = query.offset(skip).limit(limit).all()
+    
+    # 为每条日志附加 boss_name
+    result = []
+    for log in logs:
+        data = log.__dict__.copy()
+        if 'boss' in data:
+            del data['boss']  # 移除 SQLAlchemy relationship
+        data['boss_name'] = log.boss.name if log.boss else "未知"
+        result.append(LogResponse(**data))
+    return result
 
 
 @router.get("/{log_id}", response_model=LogResponse)

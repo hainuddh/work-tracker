@@ -9,8 +9,10 @@ from app.database import get_db
 from app.models import Boss, Log
 from app.schemas import BossCreate, BossUpdate, BossResponse
 from app.auth import get_current_user
+from app.logging_config import get_logger
 
 router = APIRouter(prefix="/api/bosses", tags=["老板管理"])
+logger = get_logger("boss")
 
 
 @router.post("/", response_model=BossResponse, status_code=201)
@@ -47,6 +49,7 @@ def create_boss(
     db.add(boss)
     db.commit()
     db.refresh(boss)
+    logger.info("创建老板: name=%s, phone=%s, id=%d", boss.name, boss.phone, boss.id)
     return boss
 
 

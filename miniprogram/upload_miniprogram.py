@@ -111,7 +111,7 @@ def upload_code(access_token, zip_path):
     return result
 
 # ======================== 主流程 ========================
-def main():
+def main(app_secret=None):
     print(f"小程序 AppID: {APP_ID}")
     print(f"版本: {VERSION}")
     print(f"描述: {DESC}")
@@ -130,7 +130,7 @@ def main():
     print("3. 注意：IP 白名单需要添加服务器 IP: 39.102.75.100")
     print()
     
-    app_secret = input("请输入 AppSecret: ").strip()
+    app_secret = app_secret or input("请输入 AppSecret: ").strip()
     if not app_secret:
         print("⚠ 未提供 AppSecret，无法上传")
         sys.exit(1)
