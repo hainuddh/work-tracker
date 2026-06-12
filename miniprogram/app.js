@@ -1,7 +1,7 @@
 // app.js - 全局初始化
 App({
   globalData: {
-    baseUrl: 'http://39.102.75.100:8000',
+    baseUrl: 'https://api.ddhlf.xyz',
     token: null,
     bosses: []
   },

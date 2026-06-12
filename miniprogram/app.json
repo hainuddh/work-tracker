@@ -44,5 +44,10 @@
     ]
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "request": {
+    "allowList": [
+      { "domain": "api.ddhlf.xyz" }
+    ]
+  }
 }
