@@ -33,7 +33,7 @@ MAX_CONNECTIONS = 50            # 最大并发连接数
 CONNECT_TIMEOUT = 3             # 后端连接超时(秒)
 CLIENT_READ_TIMEOUT = 10        # 读取客户端请求超时(秒)
 BACKEND_TIMEOUT = 30            # 后端响应超时(秒)
-SINGLE_CONN_MAX_LIFE = 60       # 单个连接最大生命周期(秒)
+SINGLE_CONN_MAX_LIFE = 300      # 单个连接最大生命周期(秒)
 CONN_TRACK_INTERVAL = 30        # 僵尸连接检测间隔(秒)
 BACKOFF_TIMEOUT = 0.1           # accept 空循环退避(秒)
 
