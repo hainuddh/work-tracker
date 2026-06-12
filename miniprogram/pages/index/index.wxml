@@ -1,20 +1,32 @@
 <!--pages/index/index.wxml - 首页-->
 <view class="container">
-  <!-- 登录区域 -->
+  <!-- 未登录：微信登录按钮 -->
   <view class="card" wx:if="{{!isLoggedIn}}">
-    <view class="card-title">🔐 管理员登录</view>
-    <view class="form-item">
-      <input class="form-input" placeholder="请输入密码" password bindinput="onPasswordInput" />
+    <view class="login-hero">
+      <text class="login-icon">📋</text>
+      <text class="login-title">工作日志系统</text>
+      <text class="login-desc">老板工作日志管理</text>
     </view>
-    <button class="login-btn" type="primary" bindtap="onLogin">登录</button>
+    <button class="wechat-login-btn" bindtap="onWechatLogin">
+      <text class="wechat-icon">💬</text>
+      微信一键登录
+    </button>
   </view>
 
-  <!-- 首页仪表盘 -->
+  <!-- 已登录：仪表盘 -->
   <view wx:else>
     <!-- 欢迎信息 -->
     <view class="card" style="background: linear-gradient(135deg, #4472C4, #6BA3E0); color: #fff;">
-      <text style="font-size: 36rpx; font-weight: bold;">欢迎回来 👋</text>
-      <text style="font-size: 24rpx; display: block; margin-top: 10rpx; opacity: 0.9;">工作日志系统 v1.0</text>
+      <view class="flex-between">
+        <view>
+          <text style="font-size: 36rpx; font-weight: bold;">欢迎回来 👋</text>
+          <text style="font-size: 24rpx; display: block; margin-top: 8rpx; opacity: 0.9;">{{user.nickname}}</text>
+        </view>
+        <view bindtap="updateUserInfo" class="avatar-btn">
+          <image wx:if="{{user.avatar_url}}" class="avatar-img" src="{{user.avatar_url}}" mode="aspectFill"/>
+          <text wx:else class="avatar-placeholder">✏️</text>
+        </view>
+      </view>
     </view>
 
     <!-- 统计概览 -->

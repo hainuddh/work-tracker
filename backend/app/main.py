@@ -1,47 +1,53 @@
 """
-FastAPI 入口文件 - 路由注册、启动配置、登录接口
+FastAPI 入口文件 - 路由注册、启动配置、微信登录接口
 """
 from fastapi import FastAPI, Depends, HTTPException, status, Body
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 import os
+import httpx
+from datetime import datetime
 
 from app.config import settings
-from app.database import init_db
+from app.database import init_db, SessionLocal
 from app.middleware import add_middleware
 from app.logging_config import setup_logging
 from app.routers import bosses, logs, backup
-from app.auth import create_access_token, verify_password, hash_password, DEFAULT_ADMIN_HASH
+from app.auth import (
+    create_access_token, verify_token, get_current_user,
+    get_wechat_config, wechat_code2session
+)
+from app.models import User
 
 
 # ============ 生命周期 ============
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """启动时初始化日志、数据库，关闭时清理资源"""
-    # 初始化日志
     setup_logging()
-    
-    # 获取logger
     logger = logging.getLogger(__name__)
     logger.info("应用启动")
     
     # 初始化数据库表
     init_db()
     
-    # 检查管理员首次登录
-    from app.database import SessionLocal
-    from app.models import Boss
-    db = SessionLocal()
+    # 初始化第一个微信管理员
+    from app.auth import get_wechat_config
     try:
-        admin_hint = os.path.join(os.path.dirname(__file__), ".admin_initialized")
-        if not os.path.exists(admin_hint):
-            print("=" * 50)
-            print("首次启动：默认管理员密码为 admin123")
-            print("请及时修改！登录后访问 /api/auth/change-password 修改密码。")
-            print("=" * 50)
-    finally:
-        db.close()
+        appid, secret = get_wechat_config()
+        # 检查是否已有用户
+        db = SessionLocal()
+        try:
+            user_count = db.query(User).count()
+            if user_count == 0:
+                logger.info("首次启动：请先用微信登录创建管理员账号")
+                logger.info("小程序扫码授权后会自动创建第一个用户")
+        finally:
+            db.close()
+    except HTTPException:
+        # 未配置微信参数，跳过
+        pass
     
     yield
     
@@ -65,49 +71,114 @@ app.include_router(logs.router)
 app.include_router(backup.router)
 
 
-# ============ 认证接口 ============
-@app.post("/api/auth/login")
-def login(password: str = Body(..., embed=True)):
+# ============ 微信登录接口 ============
+@app.post("/api/auth/wechat-login")
+async def wechat_login(code: str = Body(..., embed=True)):
     """
-    管理员登录，返回 JWT Token
+    微信登录：小程序 code 换取 JWT Token
     
-    - **password**: 管理员密码
-    - 默认密码: admin123
+    - **code**: 小程序 wx.login() 返回的临时授权码
+    
+    流程：
+    1. 后端用 code 向微信换取 openid
+    2. 查找或创建用户记录
+    3. 返回 JWT Token + 用户信息
+    
+    注意：前端需要先通过 wx.getUserProfile 获取 nickname/avatar，
+    然后在登录成功后调用 /api/auth/update-profile 更新
     """
-    if verify_password(password, DEFAULT_ADMIN_HASH):
-        token = create_access_token("admin")
-        return {"token": token, "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60}
-    raise HTTPException(status_code=401, detail="密码错误")
+    appid, secret = get_wechat_config()
+    
+    # 微信 code 换 openid
+    session_data = await wechat_code2session(code, appid, secret)
+    openid = session_data["openid"]
+    unionid = session_data.get("unionid")
+    
+    # 查找或创建用户
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.openid == openid).first()
+        if not user:
+            user = User(openid=openid, unionid=unionid, nickname="微信用户")
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            logging.getLogger("auth").info("新用户注册: openid=%s", openid)
+        
+        # 创建 JWT
+        token = create_access_token(user.id, user.openid, user.nickname)
+        
+        return {
+            "token": token,
+            "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "user": {
+                "id": user.id,
+                "openid": user.openid,
+                "nickname": user.nickname,
+                "avatar_url": user.avatar_url,
+            }
+        }
+    finally:
+        db.close()
 
 
-@app.post("/api/auth/change-password")
-def change_password(
-    old_password: str,
-    new_password: str,
-    _user: dict = Depends(lambda: {"username": "admin"}),
+# ============ 更新用户资料 ============
+@app.post("/api/auth/update-profile")
+async def update_profile(
+    nickname: str = "",
+    avatar_url: str = "",
+    _user: dict = Depends(get_current_user)
 ):
     """
-    修改管理员密码
-    
-    - **old_password**: 旧密码
-    - **new_password**: 新密码（>=6位）
+    更新当前登录用户的昵称和头像
     """
-    global DEFAULT_ADMIN_HASH
-    
-    if len(new_password) < 6:
-        raise HTTPException(status_code=400, detail="新密码至少6位")
-    
-    if not verify_password(old_password, DEFAULT_ADMIN_HASH):
-        raise HTTPException(status_code=401, detail="旧密码错误")
-    
-    DEFAULT_ADMIN_HASH = hash_password(new_password)
-    
-    # 标记已初始化（不再提示默认密码）
-    hint_path = os.path.join(os.path.dirname(__file__), ".admin_initialized")
-    with open(hint_path, "w") as f:
-        f.write("initialized")
-    
-    return {"message": "密码修改成功"}
+    db = SessionLocal()
+    try:
+        # 从 JWT 中获取用户 ID
+        user_id = int(_user.get("sub", 0))
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        
+        if nickname:
+            user.nickname = nickname
+        if avatar_url:
+            user.avatar_url = avatar_url
+        
+        user.updated_at = datetime.utcnow()
+        db.commit()
+        
+        return {
+            "message": "更新成功",
+            "user": {
+                "nickname": user.nickname,
+                "avatar_url": user.avatar_url,
+            }
+        }
+    finally:
+        db.close()
+
+
+# ============ 获取当前用户信息 ============
+@app.get("/api/auth/me")
+async def get_me(
+    user: dict = Depends(get_current_user)
+):
+    """获取当前登录用户信息"""
+    db = SessionLocal()
+    try:
+        user_id = int(user.get("sub", 0))
+        u = db.query(User).filter(User.id == user_id).first()
+        if not u:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        return {
+            "id": u.id,
+            "openid": u.openid,
+            "nickname": u.nickname,
+            "avatar_url": u.avatar_url,
+        }
+    finally:
+        db.close()
 
 
 # ============ 健康检查 ============
@@ -121,7 +192,7 @@ def health_check():
             "bosses": "/api/bosses/",
             "logs": "/api/logs/",
             "backup": "/api/backup/",
-            "auth": "/api/auth/login",
+            "auth": "/api/auth/wechat-login",
             "docs": "/docs",
         }
     }

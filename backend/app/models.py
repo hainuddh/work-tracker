@@ -1,11 +1,27 @@
 """
-数据模型定义 - 老板表 & 工作日志表
+数据模型定义 - 老板表 & 工作日志表 & 用户表
 遵循数据库第三范式 (3NF)
 """
 from sqlalchemy import Column, Integer, String, Text, Date, Float, DateTime, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from app.database import Base
+
+
+class User(Base):
+    """管理员用户表 - 微信登录"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    openid = Column(String(64), nullable=False, unique=True, index=True)  # 微信 openid
+    unionid = Column(String(64), nullable=True, index=True)  # 微信 unionid（可选）
+    nickname = Column(String(100), default="")  # 昵称
+    avatar_url = Column(String(500), default="")  # 头像 URL
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<User(id={self.id}, openid='{self.openid}', nickname='{self.nickname}')>"
 
 
 class Boss(Base):

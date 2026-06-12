@@ -39,9 +39,58 @@ function request(url, method, data, needAuth = true) {
   });
 }
 
+// 微信登录：小程序 code 换 JWT token
+function wechatLogin(code) {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: `${app.globalData.baseUrl}/api/auth/wechat-login`,
+      method: 'POST',
+      data: { code },
+      success(res) {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data);
+        } else {
+          const detail = res.data?.detail || '微信登录失败';
+          wx.showToast({ title: detail, icon: 'none' });
+          reject(new Error(detail));
+        }
+      },
+      fail(err) {
+        wx.showToast({ title: '网络错误', icon: 'none' });
+        reject(err);
+      }
+    });
+  });
+}
+
+// 更新用户资料（昵称、头像）
+function updateProfile(nickname, avatar_url) {
+  return new Promise((resolve, reject) => {
+    const header = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${app.globalData.token}`
+    };
+    wx.request({
+      url: `${app.globalData.baseUrl}/api/auth/update-profile`,
+      method: 'POST',
+      data: { nickname, avatar_url },
+      header,
+      success(res) {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(res.data);
+        } else {
+          reject(new Error(res.data?.detail || '更新失败'));
+        }
+      },
+      fail(err) { reject(err); }
+    });
+  });
+}
+
 const api = {
   // 认证
-  login(password) { return request('/api/auth/login', 'POST', { password }); },
+  wechatLogin,
+  updateProfile,
   
   // 老板 CRUD
   listBosses(params = {}) { return request('/api/bosses/', 'GET', params); },

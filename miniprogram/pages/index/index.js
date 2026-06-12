@@ -4,35 +4,78 @@ const { api } = require('../../utils/api');
 Page({
   data: {
     isLoggedIn: false,
-    password: '',
+    user: null,
     stats: { totalBosses: 0, totalLogs: 0, totalAmount: 0 },
     recentLogs: []
   },
 
   onShow() {
     const app = getApp();
-    this.setData({ isLoggedIn: app.isLoggedIn() });
+    this.setData({
+      isLoggedIn: app.isLoggedIn(),
+      user: app.globalData.user
+    });
     if (this.data.isLoggedIn) {
       this.loadDashboard();
     }
   },
 
-  onPasswordInput(e) {
-    this.setData({ password: e.detail.value });
-  },
-
-  async onLogin() {
-    const pwd = this.data.password.trim();
-    if (!pwd) return wx.showToast({ title: '请输入密码', icon: 'none' });
-    
+  // 微信一键登录
+  async onWechatLogin() {
+    wx.showLoading({ title: '登录中...' });
     try {
-      const res = await api.login(pwd);
-      getApp().setToken(res.token);
-      this.setData({ isLoggedIn: true, password: '' });
+      // 1. 获取微信登录凭证 code
+      const loginRes = await new Promise((resolve, reject) => {
+        wx.login({ success: resolve, fail: reject });
+      });
+      
+      // 2. 用 code 向后端换取 JWT token
+      const loginData = await api.wechatLogin(loginRes.code);
+      
+      // 3. 保存 token 和用户信息
+      const app = getApp();
+      app.globalData.token = loginData.token;
+      app.globalData.user = loginData.user;
+      wx.setStorageSync('token', loginData.token);
+      wx.setStorageSync('user', loginData.user);
+      
+      this.setData({
+        isLoggedIn: true,
+        user: loginData.user
+      });
+      
       wx.showToast({ title: '登录成功' });
       this.loadDashboard();
     } catch (e) {
-      // error handled in api.js
+      wx.showToast({ title: '登录失败，请重试', icon: 'none' });
+    } finally {
+      wx.hideLoading();
+    }
+  },
+
+  // 更新用户资料（昵称、头像）
+  async updateUserInfo() {
+    try {
+      const userInfo = await new Promise((resolve, reject) => {
+        wx.getUserProfile({
+          desc: '用于完善个人资料',
+          success: resolve,
+          fail: reject
+        });
+      });
+      
+      await api.updateProfile(userInfo.userInfo.nickName, userInfo.userInfo.avatarUrl);
+      
+      // 更新本地缓存
+      const app = getApp();
+      app.globalData.user.nickname = userInfo.userInfo.nickName;
+      app.globalData.user.avatar_url = userInfo.userInfo.avatarUrl;
+      wx.setStorageSync('user', app.globalData.user);
+      
+      this.setData({ user: app.globalData.user });
+      wx.showToast({ title: '资料已更新' });
+    } catch (e) {
+      wx.showToast({ title: '授权被拒绝', icon: 'none' });
     }
   },
 
@@ -52,7 +95,6 @@ Page({
 
   async loadDashboard() {
     try {
-      // 并行加载老板列表和最近日志
       const [bosses, logs] = await Promise.all([
         api.listBosses({ limit: 1000 }),
         api.listLogs({ limit: 5 })
@@ -60,7 +102,6 @@ Page({
       
       const totalAmount = logs.reduce((s, l) => s + (l.amount || 0), 0);
       
-      // 格式化最近日志日期
       const recentLogs = logs.map(l => ({
         ...l,
         date: (new Date(l.date)).toLocaleDateString('zh-CN')
@@ -82,9 +123,8 @@ Page({
     try {
       await api.backup();
       wx.showToast({ title: '备份成功' });
-    } catch (e) {
-      // handled
-    } finally {
+    } catch (e) {}
+    finally {
       wx.hideLoading();
     }
   }
